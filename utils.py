@@ -76,8 +76,6 @@ def zero_centered_gradient_penalty(model, real_samples, fake_samples, device="cu
 
     return total_gradient_penalty_r1, total_gradient_penalty_r2
 
-
-
 def downsample_speech_cuda(signal: torch.Tensor, original_sample_rate: int, target_sample_rate: int) -> torch.Tensor:
 
     device = signal.device
@@ -87,3 +85,39 @@ def downsample_speech_cuda(signal: torch.Tensor, original_sample_rate: int, targ
     resampler = Resample(orig_freq=original_sample_rate, new_freq=target_sample_rate).to(device)
     downsampled_signal = resampler(signal)
     return downsampled_signal
+
+def prefix_load_checkpoint(filepath, device):
+    assert os.path.isfile(filepath)
+    print("Loading '{}'".format(filepath))
+    checkpoint = torch.load(filepath, map_location=device)
+    state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
+    new_state_dict = {}
+    prefix = "module."
+    for key in state_dict["generator"].keys():
+        if key.startswith(prefix):
+            new_key = key[len(prefix):]  # Remove the prefix
+            new_state_dict[new_key] = state_dict["generator"][key]
+
+    print("Complete.")
+    return new_state_dict
+
+def prefix_load_checkpoint_discriminator(filepath, device):
+    assert os.path.isfile(filepath)
+    print("Loading '{}'".format(filepath))
+    checkpoint = torch.load(filepath, map_location=device)
+    state_dict = checkpoint['state_dict'] if 'state_dict' in checkpoint else checkpoint
+
+    new_state_dict_mpd = {}
+    new_state_dict_mrd = {}
+    prefix = "module."
+    for key in state_dict["mpd"].keys():
+        if key.startswith(prefix):
+            new_key = key[len(prefix):]  # Remove the prefix
+            new_state_dict_mpd[new_key] = state_dict["mpd"][key]
+    for key in state_dict["mrd"].keys():
+        if key.startswith(prefix):
+            new_key = key[len(prefix):]  # Remove the prefix
+            new_state_dict_mrd[new_key] = state_dict["mrd"][key]     
+
+    print("Complete.")
+    return new_state_dict_mpd, new_state_dict_mrd, state_dict["steps"], state_dict["epoch"]
