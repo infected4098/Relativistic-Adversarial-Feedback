@@ -1,3 +1,6 @@
+# Directly paste from https://github.com/NVIDIA/BigVGAN
+
+
 import torch
 import torch.nn.functional as F
 import torch.nn as nn
