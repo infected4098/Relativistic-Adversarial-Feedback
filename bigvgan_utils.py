@@ -1,3 +1,6 @@
+# Directly paste from BigVGAN https://github.com/NVIDIA/BigVGAN
+
+
 import glob
 import os
 import torch
@@ -45,3 +48,17 @@ def scan_checkpoint(cp_dir, prefix):
     if len(cp_list) == 0:
         return None
     return sorted(cp_list)[-1]
+
+def init_weights(m, mean=0.0, std=0.01):
+    classname = m.__class__.__name__
+    if classname.find("Conv") != -1:
+        m.weight.data.normal_(mean, std)
+
+
+def get_padding(kernel_size, dilation=1):
+    return int((kernel_size*dilation - dilation)/2)
+
+
+
+
+
