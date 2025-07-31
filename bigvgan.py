@@ -15,9 +15,9 @@ from torch.nn import Conv1d, ConvTranspose1d
 from torch.nn.utils import weight_norm, remove_weight_norm
 
 import activations
-from utils import init_weights, get_padding
+from bigvgan_utils import init_weights, get_padding
 from alias_free_activation.torch.act import Activation1d as TorchActivation1d
-from utils import AttrDict
+from bigvgan_utils import AttrDict
 
 from huggingface_hub import PyTorchModelHubMixin, hf_hub_download
 
