@@ -9,7 +9,7 @@ from librosa.filters import mel as librosa_mel_fn
 import pathlib
 from tqdm import tqdm
 from typing import List, Tuple, Optional
-from utils import AttrDict
+from bigvgan_utils import AttrDict
 
 MAX_WAV_VALUE = 32767.0 
 
