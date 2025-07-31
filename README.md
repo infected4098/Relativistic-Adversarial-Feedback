@@ -7,3 +7,6 @@ This repository provides the official codebase and resources for RAF as describe
 ```
 pip install -r requirements.txt
 ```
+## Datasets
+
+1. Download all datasets from [LibriTTS](https://www.openslr.org/60/)
