@@ -214,7 +214,6 @@ def run(rank, n_gpus, a, hps):
     generator.train()
     mpd.train()
     mrd.train()
-    #scaler = GradScaler(enabled=hps.train.fp16_run)
     scheduler_g = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=hps.lr_decay, last_epoch=last_epoch)
     scheduler_d = torch.optim.lr_scheduler.ExponentialLR(optim_d, gamma=hps.lr_decay, last_epoch=last_epoch)
 
@@ -236,7 +235,7 @@ def run(rank, n_gpus, a, hps):
 def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus, current_gamma):
 
     # WavLM
-    checkpoint = torch.load("/home/yongjoonlee/pretrained/WavLM-Large.pt")
+    checkpoint = torch.load("./WavLM-Large.pt")
     wavlm_cfg = WavLMConfig(checkpoint['cfg'])
     wavlm = WavLM(wavlm_cfg).to('cuda')
     wavlm.load_state_dict(checkpoint['model'])
@@ -285,8 +284,6 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
         msstft_distance = msstftloss(gt_as, pred_as) * 0.5
         gt = downsample_speech_cuda(gt, hps.sampling_rate, 16000) #[B, 1, sequence_length] 
         pred = downsample_speech_cuda(pred, hps.sampling_rate, 16000) #[B, 1, sequence_length] 
-        #gt.shape = [B, 1, sequence_length], pred.shape = [B, 1, sequence_length]
-        #vq_distance = embed_loss(model=VQVAE, model_name="vqvae", gt=gt, pred=pred, device=device) * 60
         wavlm_distance = embed_loss(model=wavlm, model_name="wavlm", gt=gt, pred=pred, device=device) * 40000  # [B, 1]. 15 when the transformer features
         hubert_distance = embed_loss(model=hubert, model_name="hubert", gt=gt, pred=pred, device=device) * 90000
 
@@ -468,8 +465,6 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
                 model.eval()
                 torch.cuda.empty_cache()
                 val_err_tot = 0
-                val_scoreq_tot = 0
-                scoreq_val = Scoreq(data_domain='natural', device = 'cuda', mode='nr')
 
                 with torch.no_grad():
                     for j, batch in enumerate(eval_loader):
@@ -480,12 +475,7 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
                                                         hps.hop_size, hps.win_size,
                                                         hps.fmin, hps.fmax_for_loss)
                         val_err_tot += F.l1_loss(y_mel, y_g_hat_mel).item()
-                        val_scoreq_tot += scoreq_score_val_ds(scoreq_val, y_g_hat.detach(), sr=hps.sampling_rate)
-                    val_scoreq_mean = val_scoreq_tot / (j + 1)
-                    wandb.log({"validation/validation_scoreq_mean": val_scoreq_mean, "steps": steps})
-                    print("Validation Scoreq Score:", val_scoreq_mean)
                     wandb.log({"validation/validation_mel_spec_error": val_err_tot, "steps": steps})
-                del scoreq_val
         steps += 1
 
     scheduler_g.step()
@@ -498,19 +488,19 @@ def main():
 
     a = easydict.EasyDict({
     "group_name" : None,
-    "input_wavs_dir": "/home/yongjoonlee/LibriTTS/",
+    "input_wavs_dir": "./LibriTTS/",
     "input_mels_dir": 'ft_dataset',
-    "input_training_file": '/home/yongjoonlee/filelists/LibriTTS/train-full.txt',
-    "input_validation_file": '/home/yongjoonlee/filelists/LibriTTS/val-full.txt',
-    "checkpoint_path": '/home/yongjoonlee/PeriodWave/daf_final',
-    "config": '/home/yongjoonlee/PeriodWave/configs/bigvgan_base_100band_24khz.json',
+    "input_training_file": './train-full.txt',
+    "input_validation_file": './val-full.txt',
+    "checkpoint_path": './bigvganbase_raf',
+    "config": './bigvgan_base_100band_24khz.json',
     "training_epochs": 45,
     "stdout_interval": 2500,
     "checkpoint_interval": 50000,
     "summary_interval": 2500,
     "validation_interval": 50000,
     "fine_tuning": False,
-    "experiment_name": "euc_hwnorm_scoreq_recon01_long"
+    "experiment_name": "bigvganbase_raf"
     })
 
     """Assume Single Node Multi GPUs Training Only"""
