@@ -1,3 +1,3 @@
 # Relativistic-Adversarial-Feedback
 
-This repository holds the codes implement Relativistic Adversarial Feedback (RAF). 
+This repository holds the codes to implement Relativistic Adversarial Feedback (RAF). 
