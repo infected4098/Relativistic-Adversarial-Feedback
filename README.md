@@ -11,3 +11,19 @@ pip install -r requirements.txt
 
 1. Download all datasets from [LibriTTS](https://www.openslr.org/60/).
 2. Store the datasets in a designated directory and change the directory path.
+
+
+
+## References
+
+BigVGAN: [BigVGAN](https://github.com/NVIDIA/BigVGAN)
+
+
+HiFi-GAN: [HiFi-GAN](https://github.com/jik876/hifi-gan)
+
+Vocos: [Vocos](https://github.com/gemelo-ai/vocos)
+
+PeriodWave and PeriodWave-Turbo: [PeriodWave](https://github.com/sh-lee-prml/PeriodWave)
+
+WaveFM: [WaveFM](https://github.com/luotianze666/wavefm)
+
