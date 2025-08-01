@@ -18,7 +18,6 @@ pip install -r requirements.txt
 
 BigVGAN: [BigVGAN](https://github.com/NVIDIA/BigVGAN)
 
-
 HiFi-GAN: [HiFi-GAN](https://github.com/jik876/hifi-gan)
 
 Vocos: [Vocos](https://github.com/gemelo-ai/vocos)
