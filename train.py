@@ -1,3 +1,6 @@
+# The train code is adapted from https://github.com/sh-lee-prml/PeriodWave and https://github.com/NVIDIA/BigVGAN.
+
+
 import warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
 import itertools
@@ -53,7 +56,8 @@ def get_param_num(model):
 
 
 def run(rank, n_gpus, a, hps):
-    
+
+    # gamma is linearly decreased to 80 % of the original value 0.1 throughout the whole training.
     start_gamma = 0.1
     end_gamma = 0.08
     gamma_schedule = GammaScheduler(start_gamma, end_gamma, a.training_epochs)
@@ -67,8 +71,12 @@ def run(rank, n_gpus, a, hps):
     torch.cuda.set_device(rank)
     device = torch.device('cuda:{:d}'.format(rank))
 
+    # Collecting filelists 
+    
     training_filelist, validation_filelist = get_dataset_filelist(a)
 
+    # Training dataset
+    
     trainset = MelDataset(
         training_filelist,
         hps,
@@ -95,7 +103,7 @@ def run(rank, n_gpus, a, hps):
                               batch_size=hps.batch_size, pin_memory=True, drop_last=True)
 
  
-
+    # Validation dataset
 
     if rank == 0:
         validset = MelDataset(
@@ -159,7 +167,6 @@ def run(rank, n_gpus, a, hps):
         print("number of Parameters for MPD:  ", get_param_num(mpd))
         print("number of Parameters for MRD:  ", get_param_num(mrd))
 
-        #utmos_model = torch.hub.load("tarepan/SpeechMOS:v1.2.0", "utmos22_strong", trust_repo=True).cuda()
 
     else:
         utmos_model = None
@@ -234,6 +241,8 @@ def run(rank, n_gpus, a, hps):
 
 def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus, current_gamma):
 
+    # Load quality gap estimators 
+    
     # WavLM
     checkpoint = torch.load("./WavLM-Large.pt")
     wavlm_cfg = WavLMConfig(checkpoint['cfg'])
@@ -250,6 +259,7 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
     msstftloss.eval()
     scoreq_model_recon = Scoreq(data_domain='synthetic', mode='ref', device='cuda')
 
+    # SSL features embedding distance
 
     def embed_loss(model, model_name, gt, pred, device):
         gt = gt.to(device)
@@ -278,6 +288,9 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
         squared_diff = torch.mean(squared_diff, dim=(1, 2))  # [B]
 
         return squared_diff.unsqueeze(1) # [B, 1]  
+
+
+    # Q(y, G(x))
     def qyqg(gt, pred, device):
         gt_as = AudioSignal(gt.squeeze(1), hps.sampling_rate)
         pred_as = AudioSignal(pred.squeeze(1), hps.sampling_rate)
@@ -321,27 +334,30 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
         
         optim_d.zero_grad()
 
-        if steps % 3 != 0: # No gradient penalty
+        if steps % 3 != 0: # No zero-centered gradient penalty
    
             qy_qg = qyqg(gt=y, pred=y_g_hat.detach(), device='cuda').detach()
 
             # MPD
             y_df_hat_r, y_df_hat_g, _, _ = mpd(y, y_g_hat.detach())
+
+
+            # Discriminator gap
             dy_dg_mpd = dydg_asym(y_df_hat_r, y_df_hat_g, big="dr").to('cuda')
             n_mpd = dy_dg_mpd.shape[0]
 
             qy_qg_mpd = repeat_qydiffqg(qy_qg, n_mpd).to('cuda')  # [N, B, 3]
-            #mpd_loss = F.mse_loss(dy_dg_mpd, qy_qg_mpd) + torch.mean(dy_dg_mpd_rp) # [1]
             mpd_loss = F.mse_loss(dy_dg_mpd, qy_qg_mpd)
             qy_qg_vis = torch.mean(torch.mean(qy_qg_mpd.detach(), dim=0), dim=0).cpu().numpy()
 
             # MRD
             y_ds_hat_r, y_ds_hat_g, _, _ = mrd(y, y_g_hat.detach())
+
+            # Discriminator gap
             dy_dg_msd = dydg_asym(y_ds_hat_r, y_ds_hat_g, big="dr").to('cuda')  # [N, B, 3]
             
             n_msd = dy_dg_msd.shape[0]  # the number of discriminators
             qy_qg_msd = repeat_qydiffqg(qy_qg, n_msd).to('cuda')  # [N, B, 3]. N identical tensors.
-            #msd_loss = F.mse_loss(dy_dg_msd, qy_qg_msd) + torch.mean(dy_dg_msd_rp)  # [1]
             msd_loss = F.mse_loss(dy_dg_msd, qy_qg_msd)
             loss_disc_all = mpd_loss + msd_loss
             loss_disc_all.backward()
@@ -349,12 +365,14 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
             #grad_norm_mrd = torch.nn.utils.clip_grad_norm_(mrd.parameters(), 1000)
             optim_d.step()
 
-        else: # No gradient penalty
+        else: # Apply zero-centered gradient penalty
    
             qy_qg = qyqg(gt=y, pred=y_g_hat.detach(), device='cuda').detach()
 
             # MPD
             y_df_hat_r, y_df_hat_g, _, _ = mpd(y, y_g_hat.detach())
+
+            # Discriminator gap
             dy_dg_mpd = dydg_asym(y_df_hat_r, y_df_hat_g, big="dr").to('cuda')
             n_mpd = dy_dg_mpd.shape[0]
 
@@ -368,6 +386,8 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
 
             # MRD
             y_ds_hat_r, y_ds_hat_g, _, _ = mrd(y, y_g_hat.detach())
+
+            # Discriminator gap
             dy_dg_msd = dydg_asym(y_ds_hat_r, y_ds_hat_g, big="dr").to('cuda')  # [N, B, 3]
             n_msd = dy_dg_msd.shape[0]  # the number of discriminators
             qy_qg_msd = repeat_qydiffqg(qy_qg, n_msd).to('cuda')  # [N, B, 3]. N identical tensors.
@@ -388,6 +408,8 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
         # MPD loss
         optimizer.zero_grad()
         loss_mel = F.l1_loss(y_mel, y_g_hat_mel) 
+
+        # SCOREQ receives 16kHz waveform
         gt_16k = downsample_speech_cuda(y, hps.sampling_rate, 16000) #[B, 1, sequence_length] # Only when 22k 
         pred_16k = downsample_speech_cuda(y_g_hat, hps.sampling_rate, 16000) #[B, 1, sequence_length] # Only when 22k 
         scoreq_recon_loss = torch.mean(scoreq_model_recon.predict(test_path = pred_16k, ref_path = gt_16k))
@@ -396,8 +418,6 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
 
         # Generator loss
 
-        #dy_dg_gen_mpd = dydg_asym(gy_df_hat_r, gy_df_hat_g, big="dg")
-        #dy_dg_gen_msd = dydg_asym(gy_ds_hat_r, gy_ds_hat_g, big="dg")
         dy_dg_gen_mpd_rp = dydg_asym(gy_df_hat_r, gy_df_hat_g, big="dr")
         dy_dg_gen_msd_rp = dydg_asym(gy_ds_hat_r, gy_ds_hat_g, big="dr")   
 
@@ -471,6 +491,8 @@ def train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_gpus,
                         x, y, _, y_mel = batch
                         y_g_hat = model(x.to('cuda'))
                         y_mel = torch.autograd.Variable(y_mel.to('cuda', non_blocking=True))
+
+                        # Log mel spectrogram error
                         y_g_hat_mel = mel_spectrogram(y_g_hat.squeeze(1), hps.n_fft, hps.num_mels, hps.sampling_rate,
                                                         hps.hop_size, hps.win_size,
                                                         hps.fmin, hps.fmax_for_loss)
