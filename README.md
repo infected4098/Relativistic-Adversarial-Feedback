@@ -7,11 +7,16 @@ This repository provides the official codebase and resources for RAF as describe
 ```
 pip install -r requirements.txt
 ```
+
 ## Datasets
 
 1. Download all datasets from [LibriTTS](https://www.openslr.org/60/).
 2. Store the datasets in a designated directory and change the directory path.
 
+
+## Notices
+
+1. Pretrained models will be publicly available after the publication process is complete.
 
 
 ## References
@@ -26,4 +31,3 @@ PeriodWave and PeriodWave-Turbo: [PeriodWave](https://github.com/sh-lee-prml/Per
 
 WaveFM: [WaveFM](https://github.com/luotianze666/wavefm)
 
-To check.
