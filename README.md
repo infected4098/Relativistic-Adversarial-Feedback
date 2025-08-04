@@ -16,18 +16,13 @@ pip install -r requirements.txt
 
 ## Notices
 
-1. Pretrained models will be publicly available after the publication process is complete.
-
+Pretrained models will be made publicly available upon completion of the publication process.
 
 ## References
 
 BigVGAN: [BigVGAN](https://github.com/NVIDIA/BigVGAN)
-
 HiFi-GAN: [HiFi-GAN](https://github.com/jik876/hifi-gan)
-
 Vocos: [Vocos](https://github.com/gemelo-ai/vocos)
-
 PeriodWave and PeriodWave-Turbo: [PeriodWave](https://github.com/sh-lee-prml/PeriodWave)
-
 WaveFM: [WaveFM](https://github.com/luotianze666/wavefm)
 
