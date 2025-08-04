@@ -17,7 +17,7 @@ import torch.multiprocessing as mp
 import easydict
 from dataset import get_dataset_filelist, MelDataset, mel_spectrogram, MAX_WAV_VALUE
 from bigvgan import BigVGAN
-from model.daf_discriminator import MultiPeriodDiscriminator, MultiResolutionDiscriminator, \
+from discriminator import MultiPeriodDiscriminator, MultiResolutionDiscriminator, \
     feature_loss, generator_loss, discriminator_loss
 from quality_model.scoreq import Scoreq
 from utils import downsample_speech_cuda, zero_centered_gradient_penalty, dydg_asym, repeat_qydiffqg, prefix_load_checkpoint, prefix_load_checkpoint_discriminator
