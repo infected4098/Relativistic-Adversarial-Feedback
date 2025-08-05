@@ -496,7 +496,7 @@ def raf_train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_g
             if steps % a.stdout_interval == 0:
                 with torch.no_grad():
                     mel_error = F.l1_loss(y_mel, y_g_hat_mel).item()
-
+                # Make sure RAF GP values do not exceed 1.
                 print(
                     'Steps : {:d}, RAF Gen Loss Total : {:.3f}, Mel-Spec. Error : {:.3f}, RAF MPD Loss : {:.3f}, RAF MRD Loss : {:.3f}, RAF MPD Gen : {:.3f}, RAF MRD Gen : {:.3f}, RAF GP MPD : {:.3f}, RAF GP MRD : {:.3f}, s/b : {:4.3f}'.
                     format(steps, raf_total_gen_loss, mel_error, raf_mpd_loss, raf_mrd_loss, raf_gen_mpd_loss, raf_gen_mrd_loss, raf_mpd_gp,
@@ -515,7 +515,7 @@ def raf_train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_g
                                     'steps': steps,
                                     'epoch': epoch})
 
-            # RAF Tensorboard/Wandb logging
+            # RAF Wandb logging
             if steps % a.summary_interval == 0:
                 wandb.log({"raf_generator/gen_loss_total": raf_total_gen_loss, "steps": steps}) 
                 wandb.log({"raf_generator/mel_spec_error": mel_error, "steps": steps})
