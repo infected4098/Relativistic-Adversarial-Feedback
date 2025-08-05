@@ -164,8 +164,7 @@ def run(rank, n_gpus, a, hps):
 
     # Print model parameter counts
     if rank == 0:
-        num_param = get_param_num(raf_generator)
-        print('Number of Parameters for RAF Generator:', num_param)
+        print('Number of Parameters for RAF Generator:', get_param_num(raf_generator))
         print("Number of Parameters for RAF MPD:  ", get_param_num(raf_mpd))
         print("Number of Parameters for RAF MRD:  ", get_param_num(raf_mrd))
 
