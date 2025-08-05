@@ -15,7 +15,7 @@ MATPLOTLIB_FLAG = False
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG)
 logger = logging
 
-def dydg_asym(disc_real_outputs, disc_generated_outputs, big="dr"):
+def discriminator_gap(disc_real_outputs, disc_generated_outputs, big="dr"):
    smallds = []
    if big == "dr":
       for dr, dg in zip(disc_real_outputs, disc_generated_outputs): # [B, 3, sequence_length]
@@ -30,7 +30,7 @@ def dydg_asym(disc_real_outputs, disc_generated_outputs, big="dr"):
    return torch.stack(smallds, dim=0)
 
 
-def repeat_qydiffqg(qyqg, N):
+def repeat_quality_gap(qyqg, N):
   return qyqg.unsqueeze(0).repeat(N, 1, 1)
 
 
