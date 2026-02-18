@@ -315,17 +315,17 @@ def raf_train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_g
         # M-STFT distance for multiple resolution spectral analysis
         gt_as = AudioSignal(gt.squeeze(1), hps.sampling_rate)
         pred_as = AudioSignal(pred.squeeze(1), hps.sampling_rate)
-        msstft_distance = raf_msstft_loss(gt_as, pred_as) * 0.5  # αM = 0.5
+        msstft_distance = raf_msstft_loss(gt_as, pred_as) * 1  # αM = 0.5
         
         # Downsample to 16kHz for SSL models (WavLM and HuBERT operate at 16kHz)
         gt = downsample_speech_cuda(gt, hps.sampling_rate, 16000) #[B, 1, sequence_length] 
         pred = downsample_speech_cuda(pred, hps.sampling_rate, 16000) #[B, 1, sequence_length] 
         
         # WavLM distance with scaling factor αW
-        wavlm_distance = compute_ssl_embedding_distance(model=raf_wavlm, model_name="wavlm", gt=gt, pred=pred, device=device) * 40000
+        wavlm_distance = compute_ssl_embedding_distance(model=raf_wavlm, model_name="wavlm", gt=gt, pred=pred, device=device) * 10000
         
         # HuBERT distance with scaling factor αH  
-        hubert_distance = compute_ssl_embedding_distance(model=raf_hubert, model_name="hubert", gt=gt, pred=pred, device=device) * 90000
+        hubert_distance = compute_ssl_embedding_distance(model=raf_hubert, model_name="hubert", gt=gt, pred=pred, device=device) * 10000
 
         # Concatenate all quality gap components [αM*QM, αW*QW, αH*QH]
         return torch.cat((msstft_distance, wavlm_distance, hubert_distance), dim = 1)
