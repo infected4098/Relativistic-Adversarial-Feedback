@@ -266,8 +266,6 @@ def raf_train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_g
     raf_msstft_loss = QMultiScaleSTFTLoss(window_lengths = [4096, 2048, 1024, 512, 256]).to('cuda')
     raf_msstft_loss.eval()
     
-    # SCOREQ model for reconstruction loss
-    raf_scoreq_model = Scoreq(data_domain='synthetic', mode='ref', device='cuda')
 
     def compute_ssl_embedding_distance(model, model_name, gt, pred, device):
         """
@@ -461,11 +459,9 @@ def raf_train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_g
         # RAF Mel-spectrogram reconstruction loss
         raf_mel_loss = F.l1_loss(y_mel, y_g_hat_mel) 
 
-        # RAF SCOREQ reconstruction loss (operates on 16kHz)
         gt_16k = downsample_speech_cuda(y, hps.sampling_rate, 16000) #[B, 1, sequence_length] 
         pred_16k = downsample_speech_cuda(y_g_hat, hps.sampling_rate, 16000) #[B, 1, sequence_length] 
-        raf_scoreq_recon_loss = torch.mean(raf_scoreq_model.predict(test_path = pred_16k, ref_path = gt_16k))
-        
+     
         # RAF Generator discriminator outputs
         gy_df_hat_r, gy_df_hat_g, fmap_f_r, fmap_f_g = raf_mpd(y, y_g_hat)
         gy_ds_hat_r, gy_ds_hat_g, fmap_s_r, fmap_s_g = raf_mrd(y, y_g_hat)
@@ -484,7 +480,7 @@ def raf_train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_g
         # RAF Total generator loss with weighted components
         raf_total_gen_loss = (raf_gen_mpd_loss + raf_gen_mrd_loss + 
                              raf_feature_loss_mrd + raf_feature_loss_mpd + 
-                             raf_mel_loss * 26 + raf_scoreq_recon_loss * 0.1)
+                             raf_mel_loss * 26)
         raf_total_gen_loss.backward()
         raf_optimizer_g.step()
         
@@ -529,10 +525,6 @@ def raf_train(a, rank, epoch, hps, nets, discs, optims, schedulers, loaders, n_g
                 wandb.log({"raf_discriminator/gradient_penalty_mrd": raf_mrd_gp, "steps": steps})
                 wandb.log({"training_epochs": epoch, "steps": steps})
                 wandb.log({"learning_rate": raf_optimizer_g.param_groups[0]['lr'], "steps": steps})
-                wandb.log({"raf_quality/msstft": raf_quality_gap_vis[0], "steps": steps})
-                wandb.log({"raf_quality/wavlm": raf_quality_gap_vis[1], "steps": steps})
-                wandb.log({"raf_quality/hubert": raf_quality_gap_vis[2], "steps": steps})
-                wandb.log({"raf_quality/scoreq_recon_loss": raf_scoreq_recon_loss, "steps": steps})
                 wandb.log({"raf_gamma": current_gamma, "steps": steps})
 
             # RAF Validation
@@ -581,7 +573,7 @@ def main():
     "summary_interval": 2500,
     "validation_interval": 50000,
     "fine_tuning": False,
-    "experiment_name": "bigvganbase_raf"
+    "experiment_name": "bigvgan_base_raf"
     })
 
     # Ensure CUDA availability for RAF training
